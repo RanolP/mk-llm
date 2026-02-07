@@ -10,5 +10,13 @@ run = "uv run ruff check src"
 description = "Format code with ruff"
 run = "uv run ruff format src"
 
+[tasks.train]
+description = "Run training script"
+run = "uv run train"
+
+[tasks.infer]
+description = "Run inference script"
+run = "uv run infer"
+
 [tools]
 uv = "0.10.0"

@@ -1,0 +1,6 @@
+# Ignore downloaded data, keep scripts
+*/raw/
+*.txt
+*.jsonl
+*.parquet
+*.arrow

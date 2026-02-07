@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TrainConfig",
+  "description": "Training configuration for RanolP's Tiny Transformer",
+  "type": "object",
+  "properties": {
+    "data": {
+      "type": "object",
+      "description": "Data configuration",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to training text file"
+        },
+        "seq_len": {
+          "type": "integer",
+          "default": 512,
+          "minimum": 1,
+          "description": "Sequence length for training"
+        },
+        "batch_size": {
+          "type": "integer",
+          "default": 4,
+          "minimum": 1,
+          "description": "Training batch size (micro-batch)"
+        },
+        "gradient_accumulation_steps": {
+          "type": "integer",
+          "default": 1,
+          "minimum": 1,
+          "description": "Number of steps to accumulate gradients (effective batch = batch_size × gradient_accumulation_steps)"
+        },
+        "shard_size": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "description": "Sequences per shard (0 = load all at once). Use to limit GPU memory."
+        }
+      },
+      "required": ["path"]
+    },
+    "optimizer": {
+      "type": "object",
+      "description": "Optimizer configuration",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["adamw"],
+          "default": "adamw",
+          "description": "Optimizer type"
+        },
+        "weight_decay": {
+          "type": "number",
+          "default": 0.01,
+          "minimum": 0,
+          "description": "Weight decay for AdamW"
+        },
+        "b1": {
+          "type": "number",
+          "default": 0.9,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Adam beta1"
+        },
+        "b2": {
+          "type": "number",
+          "default": 0.95,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Adam beta2"
+        },
+        "eps": {
+          "type": "number",
+          "default": 1e-8,
+          "minimum": 0,
+          "description": "Adam epsilon"
+        },
+        "max_grad_norm": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0,
+          "description": "Maximum gradient norm for clipping"
+        },
+        "schedule": {
+          "type": "object",
+          "description": "Learning rate schedule",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["constant", "warmup_cosine_decay"],
+              "default": "warmup_cosine_decay",
+              "description": "Schedule type"
+            },
+            "peak_lr": {
+              "type": "number",
+              "default": 3e-4,
+              "minimum": 0,
+              "description": "Peak learning rate"
+            },
+            "end_lr": {
+              "type": "number",
+              "default": 3e-5,
+              "minimum": 0,
+              "description": "End learning rate (for decay schedules)"
+            },
+            "warmup_steps": {
+              "type": "integer",
+              "default": 100,
+              "minimum": 0,
+              "description": "Number of warmup steps"
+            }
+          }
+        }
+      }
+    },
+    "epochs": {
+      "type": "integer",
+      "default": 10,
+      "minimum": 1,
+      "description": "Number of training epochs"
+    },
+    "seed": {
+      "type": "integer",
+      "default": 42,
+      "description": "Random seed"
+    },
+    "checkpoint": {
+      "type": "string",
+      "default": "checkpoints/model.safetensors",
+      "description": "Path to save checkpoints"
+    },
+    "resume": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Path to checkpoint to resume from"
+    }
+  },
+  "required": ["data"]
+}

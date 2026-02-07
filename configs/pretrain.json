@@ -1,0 +1,25 @@
+{
+  "$schema": "./train.schema.json",
+  "data": {
+    "path": "datasets/mixed/pretrain.txt",
+    "seq_len": 512,
+    "batch_size": 4,
+    "gradient_accumulation_steps": 16
+  },
+  "optimizer": {
+    "type": "adamw",
+    "weight_decay": 0.1,
+    "b1": 0.9,
+    "b2": 0.95,
+    "max_grad_norm": 1.0,
+    "schedule": {
+      "type": "warmup_cosine_decay",
+      "peak_lr": 6e-4,
+      "end_lr": 6e-5,
+      "warmup_steps": 2000
+    }
+  },
+  "epochs": 1,
+  "seed": 42,
+  "checkpoint": "checkpoints/pretrain.safetensors"
+}

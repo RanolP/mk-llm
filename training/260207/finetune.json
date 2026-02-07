@@ -1,0 +1,26 @@
+{
+  "$schema": "../../configs/train.schema.json",
+  "data": {
+    "path": "datasets/260207-alpaca/train.txt",
+    "seq_len": 512,
+    "batch_size": 4,
+    "gradient_accumulation_steps": 8
+  },
+  "optimizer": {
+    "type": "adamw",
+    "weight_decay": 0.01,
+    "b1": 0.9,
+    "b2": 0.95,
+    "max_grad_norm": 1.0,
+    "schedule": {
+      "type": "warmup_cosine_decay",
+      "peak_lr": 2e-5,
+      "end_lr": 2e-6,
+      "warmup_steps": 100
+    }
+  },
+  "epochs": 3,
+  "seed": 42,
+  "checkpoint": "training/260207/checkpoints/chat.safetensors",
+  "resume": "training/260207/checkpoints/pretrain.safetensors"
+}

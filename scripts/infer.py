@@ -6,25 +6,32 @@ from pathlib import Path
 import jax
 import jax.numpy as jnp
 
-from llm import Config, Transformer, tokenizer
+from llm import RTT, tokenizer
+from llm.constants import MAX_SEQ_LEN
 
 
 def sample_token(logits: jnp.ndarray, key: jax.Array, temperature: float = 1.0, top_k: int = 0) -> int:
     """Sample a token from logits with temperature and optional top-k."""
+    # Greedy decoding when temperature is 0
+    if temperature == 0:
+        return int(jnp.argmax(logits))
+
     logits = logits / temperature
 
+    # Top-k filtering
     if top_k > 0:
         top_k = min(top_k, logits.shape[-1])
-        indices = jnp.argsort(logits)[-top_k:]
-        mask = jnp.zeros_like(logits, dtype=bool).at[indices].set(True)
-        logits = jnp.where(mask, logits, -1e9)
+        top_values, _ = jax.lax.top_k(logits, top_k)
+        threshold = top_values[-1]
+        logits = jnp.where(logits >= threshold, logits, -jnp.inf)
 
-    probs = jax.nn.softmax(logits)
-    return int(jax.random.categorical(key, jnp.log(probs + 1e-9)))
+    # categorical expects log probabilities
+    log_probs = jax.nn.log_softmax(logits)
+    return int(jax.random.categorical(key, log_probs))
 
 
 def generate(
-    model: Transformer,
+    model: RTT,
     prompt: str,
     max_tokens: int,
     key: jax.Array,
@@ -36,10 +43,10 @@ def generate(
     tokens = jnp.array(tokens)[None, :]
 
     for _ in range(max_tokens):
-        if tokens.shape[1] >= model.config.max_seq_len:
-            tokens = tokens[:, -model.config.max_seq_len + 1 :]
+        if tokens.shape[1] >= MAX_SEQ_LEN:
+            tokens = tokens[:, -MAX_SEQ_LEN + 1 :]
 
-        logits = model(tokens)
+        logits = model.forward(tokens)
         next_logits = logits[0, -1, :]
 
         key, sample_key = jax.random.split(key)
@@ -58,24 +65,13 @@ def main():
     parser.add_argument("--temperature", type=float, default=0.8, help="Sampling temperature")
     parser.add_argument("--top-k", type=int, default=50, help="Top-k sampling (0 to disable)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    parser.add_argument("--d-model", type=int, default=256, help="Model dimension")
-    parser.add_argument("--n-heads", type=int, default=4, help="Number of attention heads")
-    parser.add_argument("--n-layers", type=int, default=4, help="Number of layers")
-    parser.add_argument("--seq-len", type=int, default=256, help="Max sequence length")
     args = parser.parse_args()
-
-    config = Config(
-        d_model=args.d_model,
-        n_heads=args.n_heads,
-        n_layers=args.n_layers,
-        max_seq_len=args.seq_len,
-    )
 
     # Initialize model structure and load weights
     print(f"Loading checkpoint from {args.checkpoint}")
-    model = Transformer("model", config, jax.random.key(0))
+    model = RTT("model", jax.random.key(0))
     model.load_safetensors(args.checkpoint)
-    print(f"Loaded model: {config}")
+    print("Loaded model")
 
     key = jax.random.key(args.seed)
 

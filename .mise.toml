@@ -1,0 +1,14 @@
+[tasks.typecheck]
+description = "Run type checking with ty"
+run = "uv run ty check src"
+
+[tasks.lint]
+description = "Run linting with ruff"
+run = "uv run ruff check src"
+
+[tasks.format]
+description = "Format code with ruff"
+run = "uv run ruff format src"
+
+[tools]
+uv = "0.10.0"

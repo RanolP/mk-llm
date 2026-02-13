@@ -3,14 +3,12 @@
 import json
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Literal
 
 
 @dataclass
 class LRScheduleConfig:
     """Learning rate schedule configuration."""
 
-    type: Literal["constant", "warmup_cosine_decay"] = "warmup_cosine_decay"
     peak_lr: float = 3e-4
     end_lr: float = 3e-5
     warmup_steps: int = 100
@@ -20,7 +18,6 @@ class LRScheduleConfig:
 class OptimizerConfig:
     """Optimizer configuration."""
 
-    type: Literal["adamw"] = "adamw"
     weight_decay: float = 0.01
     b1: float = 0.9
     b2: float = 0.95
@@ -37,7 +34,9 @@ class DataConfig:
     seq_len: int = 512
     batch_size: int = 4
     gradient_accumulation_steps: int = 1
-    shard_size: int = 0  # 0 = load all at once, otherwise load this many sequences per shard
+    shard_size: int = (
+        0  # 0 = load all at once, otherwise load this many sequences per shard
+    )
 
 
 @dataclass
@@ -49,7 +48,6 @@ class TrainConfig:
     epochs: int = 10
     seed: int = 42
     checkpoint: str = "checkpoints/model.safetensors"
-    resume: str | None = None
 
     @classmethod
     def from_json(cls, path: Path) -> "TrainConfig":
@@ -103,7 +101,6 @@ TRAIN_CONFIG_SCHEMA = {
         "optimizer": {
             "type": "object",
             "properties": {
-                "type": {"type": "string", "enum": ["adamw"], "default": "adamw"},
                 "weight_decay": {"type": "number", "default": 0.01, "minimum": 0},
                 "b1": {"type": "number", "default": 0.9, "minimum": 0, "maximum": 1},
                 "b2": {"type": "number", "default": 0.95, "minimum": 0, "maximum": 1},
@@ -112,14 +109,13 @@ TRAIN_CONFIG_SCHEMA = {
                 "schedule": {
                     "type": "object",
                     "properties": {
-                        "type": {
-                            "type": "string",
-                            "enum": ["constant", "warmup_cosine_decay"],
-                            "default": "warmup_cosine_decay",
-                        },
                         "peak_lr": {"type": "number", "default": 3e-4, "minimum": 0},
                         "end_lr": {"type": "number", "default": 3e-5, "minimum": 0},
-                        "warmup_steps": {"type": "integer", "default": 100, "minimum": 0},
+                        "warmup_steps": {
+                            "type": "integer",
+                            "default": 100,
+                            "minimum": 0,
+                        },
                     },
                 },
             },
@@ -127,7 +123,6 @@ TRAIN_CONFIG_SCHEMA = {
         "epochs": {"type": "integer", "default": 10, "minimum": 1},
         "seed": {"type": "integer", "default": 42},
         "checkpoint": {"type": "string", "default": "checkpoints/model.safetensors"},
-        "resume": {"type": ["string", "null"], "default": None},
     },
     "required": ["data"],
 }

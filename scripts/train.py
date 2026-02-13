@@ -3,6 +3,7 @@
 import argparse
 import signal
 import sys
+import time
 from pathlib import Path
 
 import jax
@@ -216,6 +217,9 @@ def main():
     effective_batch = cfg.data.batch_size * accum_steps
     print(f"Effective batch size: {effective_batch} ({cfg.data.batch_size} × {accum_steps} accumulation steps)")
 
+    CHECKPOINT_INTERVAL = 180  # seconds
+    last_checkpoint_time = time.monotonic()
+
     pbar = tqdm(total=estimated_total_steps, desc="Training", unit="step")
 
     for epoch in range(cfg.epochs):
@@ -265,6 +269,14 @@ def main():
                         epoch=f"{epoch + 1}/{cfg.epochs}",
                     )
                     pbar.update(1)
+
+                    # Periodic checkpoint
+                    now = time.monotonic()
+                    if now - last_checkpoint_time >= CHECKPOINT_INTERVAL:
+                        model.load_state_dict(params)
+                        model.save_safetensors(checkpoint_path)
+                        tqdm.write(f"Checkpoint saved at step {step} to {checkpoint_path}")
+                        last_checkpoint_time = now
 
                     # Reset accumulation
                     accum_grads = None

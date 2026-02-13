@@ -9,7 +9,7 @@ from llm.constants import D_MODEL
 from llm.layers import TransformerBlock, LayerNorm
 from llm.utils import Module, he_init
 
-tokenizer = tiktoken.get_encoding("o200k_base")
+tokenizer = tiktoken.get_encoding("gpt2")
 
 N_LAYERS = 8
 
@@ -20,7 +20,6 @@ class RTT(Module):
     embed: Float[Array, "vocab d_model"]
     blocks: list[TransformerBlock]
     final_norm: LayerNorm
-    head: Float[Array, "d_model vocab"]
 
     def __init__(self, id: str, key: Array):
         super().__init__(id, key)
@@ -32,7 +31,6 @@ class RTT(Module):
             for i in range(N_LAYERS)
         ]
         self.final_norm = LayerNorm(f"{id}.final_norm", self.make_key("final_norm"))
-        self.head = self.safetensor("head", (D_MODEL, vocab), he_init)
 
     def forward(self, x: Int[Array, "batch seq"]) -> Float[Array, "batch seq vocab"]:
         # [batch, seq] -> [batch, seq, d_model]
@@ -43,8 +41,8 @@ class RTT(Module):
 
         x = self.final_norm(x)
 
-        # [batch, seq, d_model] @ [d_model, vocab] -> [batch, seq, vocab]
-        return x @ self.head
+        # Weight tying: reuse embed as logit head
+        return x @ self.embed.T
 
     def loss(self, tokens: Int[Array, "batch seq"]) -> Float[Array, ""]:
         # [batch, seq, vocab]

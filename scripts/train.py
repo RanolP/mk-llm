@@ -67,7 +67,7 @@ def save_training_state(
         "meta.step": np.array(step, dtype=np.int32),
         "meta.epoch": np.array(epoch, dtype=np.int32),
         "meta.shard_idx": np.array(shard_idx, dtype=np.int32),
-        "meta.rng_key": np.array(key),
+        "meta.rng_key": np.array(jax.random.key_data(key)),
     }
     opt_state = optimizer.serialize()
     for k, v in opt_state["mu"].items():
@@ -91,7 +91,7 @@ def load_training_state(
         int(state["meta.step"]),
         int(state["meta.epoch"]),
         int(state["meta.shard_idx"]),
-        jnp.array(state["meta.rng_key"]),
+        jax.random.wrap_key_data(state["meta.rng_key"]),
         {"mu": mu, "nu": nu},
     )
 

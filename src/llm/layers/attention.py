@@ -1,6 +1,5 @@
 """Multi-head attention module."""
 
-import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float, Bool
 
@@ -82,13 +81,50 @@ class Attention(Module):
         k = jnp.repeat(k, n_rep, axis=1)
         v = jnp.repeat(v, n_rep, axis=1)
 
-        # --- MHA: scaled dot-product attention ---
+        # --- MHA: flash attention ---
         q = q.transpose(0, 2, 1, 3)  # [batch, N_HEADS, seq, D_HEAD]
-        scores = q @ k.transpose(0, 1, 3, 2) / jnp.sqrt(D_HEAD)
-        scores = jnp.where(mask, scores, -1e9)
-        weights = jax.nn.softmax(scores, axis=-1)
-        out = weights @ v
+        seq_kv = k.shape[2]
+        block_size = 64
+        flash = FlashAttention(batch, N_HEADS, seq, D_HEAD)
+        for j in range(0, seq_kv, block_size):
+            k_block = k[:, :, j : j + block_size]
+            v_block = v[:, :, j : j + block_size]
+            S = q @ k_block.transpose(0, 1, 3, 2) / jnp.sqrt(D_HEAD)
+            S = jnp.where(mask[:, j : j + block_size], S, -jnp.inf)
+            out = flash.update(S, v_block)
 
         # --- MHA: output projection ---
         out = out.transpose(0, 2, 1, 3).reshape(batch, seq, N_HEADS * D_HEAD)
         return out @ self.W_O
+
+
+class FlashAttention:
+    """IO-aware tiled softmax (Flash Attention)."""
+
+    # running row-max
+    m: Float[Array, "batch heads seq_q 1"]
+    # running row-sum of exp weights
+    l: Float[Array, "batch heads seq_q 1"]
+    # running weighted output
+    O: Float[Array, "batch heads seq_q d_head"]
+
+    def __init__(self, batch: int, heads: int, seq_q: int, d_head: int):
+        self.m = jnp.full((batch, heads, seq_q, 1), -jnp.inf)
+        self.l = jnp.zeros((batch, heads, seq_q, 1))
+        self.O = jnp.zeros((batch, heads, seq_q, d_head))
+
+    def update(
+        self,
+        S: Float[Array, "batch heads seq_q block_size"],
+        V: Float[Array, "batch heads block_size d_head"],
+    ) -> Float[Array, "batch heads seq_q d_head"]:
+        m_new = jnp.maximum(self.m, S.max(axis=-1, keepdims=True))
+        alpha = jnp.exp(self.m - m_new)
+        alpha = jnp.where(jnp.isnan(alpha), 0.0, alpha)
+        self.m = m_new
+
+        P = jnp.exp(S - self.m)
+        l_new = alpha * self.l + P.sum(axis=-1, keepdims=True)
+        self.O = (alpha * self.l * self.O + P @ V) / l_new
+        self.l = l_new
+        return self.O

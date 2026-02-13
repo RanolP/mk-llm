@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+if ../check.sh; then exit 0; fi
+
 echo "Downloading TinyStories dataset..."
 
 # Download from HuggingFace
@@ -26,3 +28,5 @@ cat raw/TinyStoriesV2-GPT4-valid.txt > valid.txt
 echo "Done!"
 echo "  train.txt: $(wc -l < train.txt) lines"
 echo "  valid.txt: $(wc -l < valid.txt) lines"
+
+sha256sum train.txt valid.txt > checksums.sha256

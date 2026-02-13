@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+if ../check.sh; then exit 0; fi
+
 echo "Downloading WikiText-103 dataset..."
 
 uv run python << 'EOF'
@@ -32,3 +34,5 @@ for split in ["train", "validation", "test"]:
 
 print("Done!")
 EOF
+
+sha256sum train.txt validation.txt test.txt > checksums.sha256

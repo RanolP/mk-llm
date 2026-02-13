@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+if ../check.sh; then exit 0; fi
+
 echo "Downloading OpenBookQA dataset (for evaluation)..."
 
 python3 << 'EOF'
@@ -38,3 +40,5 @@ for split in ["train", "validation", "test"]:
 
 print("Done!")
 EOF
+
+sha256sum train.jsonl validation.jsonl test.jsonl > checksums.sha256

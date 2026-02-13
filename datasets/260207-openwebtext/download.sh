@@ -10,6 +10,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+if ../check.sh; then exit 0; fi
+
 echo "Downloading OpenWebText dataset..."
 
 # Download from HuggingFace using datasets library
@@ -35,3 +37,5 @@ print("Done!")
 EOF
 
 echo "  train.txt: $(du -h train.txt | cut -f1)"
+
+sha256sum train.txt > checksums.sha256

@@ -9,6 +9,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+if ../check.sh; then exit 0; fi
+
 echo "Downloading Alpaca dataset..."
 
 python3 << 'EOF'
@@ -36,3 +38,5 @@ with open("train.txt", "w") as f:
 print("Done!")
 print(f"  train.txt: {len(ds)} examples")
 EOF
+
+sha256sum train.txt > checksums.sha256
